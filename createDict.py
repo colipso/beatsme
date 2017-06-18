@@ -27,6 +27,7 @@ class CreateDict:
         for root,subdir,files  in os.walk(self.folder):
             if files != []:
                 for oneFile in files:
+                    print oneFile
                     f = codecs.open(root + '/' + oneFile , 'r','utf-8')
                     for line in f.readlines():
                         words = line.strip().split('|')
