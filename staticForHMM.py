@@ -12,13 +12,15 @@ sys.setdefaultencoding('utf-8')
 
 import os
 import codecs
-import time
+import re
 import math
 
 dictFile = os.getcwd() + '/dict.txt'
 emitProbF = os.getcwd() + '/BMSE/emitProb.py'
 startProbF = os.getcwd() + '/BMSE/startProb.py'
 transProbF = os.getcwd() + '/BMSE/transProb.py'
+
+corpusDir = os.getcwd() + '/corpus'
 
 infinite = -3.14e+100
 
@@ -35,7 +37,7 @@ class StaticBMSE:
             data = line.strip().strip('\n').split()
             if len(data) == 2:
                 self.dic.setdefault(data[0] , int(data[1]))
-        
+        f.close()
             
     def staticEmissionProb(self):
         '''
@@ -96,6 +98,7 @@ class StaticBMSE:
         f = codecs.open(emitF , 'w' , 'utf-8')
         f.write('# -*- coding: utf-8 -*-\n')
         f.write("P={'B': {%s},'M':{%s},'S':{%s},'E':{%s}}" % (stringB , stringM ,stringS , stringE))
+        f.close()
         return True
                 
 
@@ -126,21 +129,96 @@ class StaticBMSE:
         '''
         f = codecs.open(startF , 'w' , 'utf-8')
         f.write('# -*- coding: utf-8 -*-\n')
-        f.write("P={'B': %s,'M':%s,'S':%s,'E':%s}" % 
+        f.write("P={'B': %s,\n'M':%s,\n'S':%s,\n'E':%s}" % 
                 (str(self.startProb['B']) , str(self.startProb['M']) ,str(self.startProb['S']) , str(self.startProb['E'])))
+        f.close()
         return True
         
     
     def staticTransProb(self):
         '''
         '''
-        if self.dic == {}:
-            self.readDict()
-        pass
+        resultCount = {'B': {'E': 0, 'M': 0},
+                 'E': {'B': 0, 'S': 0},
+                 'M': {'E': 0, 'M': 0},
+                 'S': {'B': 0, 'S': 0}}
+        
+        for root,subdir,files in os.walk(corpusDir):
+            #print root , subdir , files
+            if files != []:
+                for oneFile in files:
+                    f = codecs.open(root + '/' + oneFile , 'r','utf-8')
+                    for line in f.readlines():
+                        words = line.strip().split('|')
+                        oneList = []
+                        for w in words:
+                            thaiList = re.findall(ur"[\u0E00-\u0E7F\.]+", w)
+                            if thaiList != []:
+                                s = u''
+                                for t in thaiList:
+                                    s += t
+                            oneList.append(s)
+                        if len(oneList) > 1:
+                            #wordCount += len(oneList)
+                            for i in range(len(oneList)-1):
+                                if len(oneList[i]) == 1:       #single
+                                    if len(oneList[i+1]) == 1:
+                                        resultCount['S']['S'] += 1
+                                    if len(oneList[i+1]) > 1:
+                                        resultCount['S']['B'] += 1
+                                if len(oneList[i]) == 2:
+                                    resultCount['B']['E'] += 1
+                                    if len(oneList[i+1]) == 1:
+                                        resultCount['E']['S'] += 1
+                                    if len(oneList[i+1]) > 1:
+                                        resultCount['E']['B'] += 1
+                                if len(oneList[i]) > 2:
+                                    resultCount['B']['M'] += len(oneList[i])-2
+                                    resultCount['M']['E'] += 1
+                                    resultCount['M']['M'] += len(oneList[i])-3
+                                    if len(oneList[i+1]) == 1:
+                                        resultCount['E']['S'] += 1
+                                    if len(oneList[i+1]) > 1:
+                                        resultCount['E']['B'] += 1
+                            if len(oneList[-1]) == 1:
+                                resultCount['S']['B'] += 1 #suppose the first word of next line is not a one character word 
+                            elif len(oneList[-1]) == 2:
+                                resultCount['B']['E'] += 1
+                                resultCount['E']['B'] += 1
+                            elif len(oneList[-1]) > 2:
+                                resultCount['B']['M'] += 1
+                                resultCount['M']['E'] += 1
+                                resultCount['M']['M'] += len(oneList[-1])-3
+                                resultCount['E']['B'] += 1
+                    f.close()
+        charCount = 0
+        for key in resultCount:
+            for secKey in resultCount[key]:
+                charCount += resultCount[key][secKey]
+        self.transProb = {}
+        for key in resultCount:
+            self.transProb.setdefault(key , {})
+            for secKey in resultCount[key]:
+                self.transProb[key].setdefault( secKey , math.log(resultCount[key][secKey] * 1.0 / charCount))
+                
+        #print resultCount , wordCount  ,self.transProb
+        return True
     def saveTransProb(self , transF = transProbF):
         '''
         '''
-        pass
+        f = codecs.open(transF , 'w' , 'utf-8')
+        f.write('# -*- coding: utf-8 -*-\n')
+        f.write("P={'B': {'E': %s, 'M': %s},\n'E': {'B': %s, 'S': %s},\n'M': {'E': %s, 'M': %s},\n'S': {'B': %s, 'S': %s}}" % 
+                (
+                str(self.transProb['B']['E']) , str(self.transProb['B']['M']) ,
+                str(self.transProb['E']['B']) , str(self.transProb['E']['S']),
+                str(self.transProb['M']['E']) , str(self.transProb['M']['M']),
+                str(self.transProb['S']['B']) , str(self.transProb['S']['S'])
+                )
+            )
+        f.close()
+        return True
+    
     def run(self):
         self.staticEmissionProb()
         self.saveEmissionProb()
