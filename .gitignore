@@ -1,3 +1,6 @@
 corpus/*
 *.pyc
+BMSE/*.pyc
+BMSE/emitProb.pyc
+
 
