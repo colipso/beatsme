@@ -19,6 +19,7 @@ corpusDir = os.getcwd() + '/corpus'
 class CreateDict:
     def __init__(self , folder = corpusDir):
         self.folder = folder
+        self.charset = []
     def scanFile(self):
         '''
         
@@ -37,6 +38,9 @@ class CreateDict:
                                 s = u''
                                 for t in thaiList:
                                     s += t
+                                    for oneChar in t:
+                                        if oneChar not in self.charset:
+                                            self.charset.append(oneChar)
                                 result.setdefault(s , 0)
                                 result[s] += 1
                     f.close()
@@ -52,8 +56,19 @@ class CreateDict:
             string = word + ' '+ str(value) + '\n'
             f.write(string)
         f.close()
+        
+    def saveThaiCharSet(self , fileName = 'charset.py'):
+        f = codecs.open(os.getcwd() + '/' + fileName , 'w','utf-8')
+        f.write('# -*- coding: utf-8 -*-\n')
+        listS = ''
+        for s in self.charset:
+            listS += "u'%s',\n" % s
+        f.write("charsets = [" + listS + "]")
+        f.close()
+        return True
     
 CD = CreateDict()
 data = CD.scanFile()
 CD.saveDict(data)
+CD.saveThaiCharSet()
         

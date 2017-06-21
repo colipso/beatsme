@@ -14,6 +14,8 @@ import os
 import codecs
 import re
 import math
+from charset import charsets
+
 
 dictFile = os.getcwd() + '/dict.txt'
 emitProbF = os.getcwd() + '/BMSE/emitProb.py'
@@ -72,6 +74,12 @@ class StaticBMSE:
             self.emissionProb.setdefault(key , {})
             for w in emissionCount[key]:
                 self.emissionProb[key].setdefault(w , math.log(emissionCount[key][w]*1.0/allWordCount))
+        
+        
+        for key in self.emissionProb:
+            for oneChar in charsets:
+                if oneChar not in self.emissionProb[key].keys():
+                    self.emissionProb[key][oneChar] = infinite
         return True
     
     def saveEmissionProb(self , emitF = emitProbF):
