@@ -7,3 +7,4 @@ Created on Wed Jun 21 19:04:34 2017
 """
 
 from BMSE import *
+from cutByHMM import *
