@@ -2,5 +2,8 @@ corpus/*
 *.pyc
 BMSE/*.pyc
 BMSE/emitProb.pyc
+test/thai_new_cut_wrong_cut2right.txt
+test/thai_new_cut_wrong_right2cut.txt
+test/thai_new_cut_wrong.txt
 
 
